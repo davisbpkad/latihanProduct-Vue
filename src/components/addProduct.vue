@@ -69,50 +69,95 @@
     </div>
 </template>
 
-<script setup>
+<script>
 import { ref, computed, watch } from 'vue'
 
-const props = defineProps({ editingProduct: Object })
-const emit = defineEmits(['add-product', 'update-product', 'cancel-edit'])
+export default {
+  name: 'AddProduct',
+  props: {
+    editingProduct: {
+      type: Object,
+      default: null
+    }
+  },
+  emits: ['add-product', 'update-product', 'cancel-edit'],
+  setup(props, { emit }) {
+    const emptyForm = () => ({
+      productName: '',
+      productPrice: 0,
+      productStock: 0,
+      productStockStatus: 'In Stock'
+    })
 
-const emptyForm = () => ({
-    productName: '',
-    productPrice: 0,
-    productStock: 0,
-    productStockStatus: 'In Stock'
-})
+    const form = ref(emptyForm())
+    const isEditing = computed(() => !!props.editingProduct)
 
-const form = ref(emptyForm())
-const isEditing = computed(() => !!props.editingProduct)
+    // Computed property to determine if stock input should be disabled
+    const isStockDisabled = computed(() => form.value.productStockStatus === 'Out of Stock')
 
-// Computed property to determine if stock input should be disabled
-const isStockDisabled = computed(() => form.value.productStockStatus === 'Out of Stock')
+    watch(
+      () => props.editingProduct,
+      product => { 
+        form.value = product ? { ...product } : emptyForm() 
+      },
+      { immediate: true }
+    )
 
-watch(
-    () => props.editingProduct,
-    product => { form.value = product ? { ...product } : emptyForm() },
-    { immediate: true }
-)
-
-function onSubmit() {
-    const f = form.value
-    if (!f.productName.trim() || f.productPrice <= 0 || f.productStock < 0) return
-    if (isEditing.value) emit('update-product', { ...f })
-    else {
-        emit('add-product', { ...f, id: Date.now() })
+    function onSubmit() {
+      const f = form.value
+      if (!f.productName.trim() || f.productPrice <= 0 || f.productStock < 0) {
+        alert('Please fill all fields with valid values')
+        return
+      }
+      
+      if (isEditing.value) {
+        emit('update-product', { ...f })
+      } else {
+        emit('add-product', { ...f })
         form.value = emptyForm()
+      }
     }
-}
 
-function onReset() {
-    isEditing.value ? emit('cancel-edit') : (form.value = emptyForm())
-}
+    function onReset() {
+      if (isEditing.value) {
+        emit('cancel-edit')
+      } else {
+        form.value = emptyForm()
+      }
+    }
 
-function onStockStatusChange() {
-    // Automatically set stock to 0 when "Out of Stock" is selected
-    if (form.value.productStockStatus === 'Out of Stock') {
+    function onStockStatusChange() {
+      // Automatically set stock to 0 when "Out of Stock" is selected
+      if (form.value.productStockStatus === 'Out of Stock') {
         form.value.productStock = 0
+      }
     }
+
+    return {
+      form,
+      isEditing,
+      isStockDisabled,
+      onSubmit,
+      onReset,
+      onStockStatusChange
+    }
+  }
 }
 </script>
+
+<style scoped>
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.form-control:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
 
